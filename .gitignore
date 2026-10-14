@@ -1,0 +1,14 @@
+# secrets and local state
+.env
+data/
+state/
+
+# build output
+bin/
+obj/
+publish/
+*.zip
+.DS_Store
+
+# personal Claude notes
+CLAUDE.local.md

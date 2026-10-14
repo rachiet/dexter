@@ -1,0 +1,70 @@
+#!/bin/bash
+# Dexter control script: build, install as a macOS background service, and manage it.
+set -euo pipefail
+
+HOME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LABEL="com.dexter.relay"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+PUBLISH="$HOME_DIR/publish"
+LOG_DIR="$HOME_DIR/data/logs"
+DOMAIN="gui/$(id -u)"
+
+build() {
+  dotnet publish "$HOME_DIR/src/Dexter/Dexter.csproj" -c Release -o "$PUBLISH" --nologo -v quiet
+}
+
+install() {
+  [ -f "$HOME_DIR/.env" ] || { echo "Missing .env. Copy .env.example to .env and fill it in."; exit 1; }
+  local claude_path
+  claude_path="$(command -v claude || true)"
+  [ -n "$claude_path" ] || { echo "claude not found on PATH."; exit 1; }
+
+  build
+  mkdir -p "$LOG_DIR" "$(dirname "$PLIST")"
+  cat > "$PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$LABEL</string>
+  <key>ProgramArguments</key><array><string>$PUBLISH/Dexter</string></array>
+  <key>WorkingDirectory</key><string>$HOME_DIR</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>DEXTER_HOME</key><string>$HOME_DIR</string>
+    <key>DEXTER_CLAUDE_PATH</key><string>$claude_path</string>
+    <key>PATH</key><string>$(dirname "$claude_path"):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>30</integer>
+  <key>StandardOutPath</key><string>$LOG_DIR/dexter.log</string>
+  <key>StandardErrorPath</key><string>$LOG_DIR/dexter.log</string>
+</dict>
+</plist>
+EOF
+  launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+  launchctl bootstrap "$DOMAIN" "$PLIST"
+  echo "Dexter installed and started. Logs: $LOG_DIR/dexter.log"
+}
+
+uninstall() {
+  launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+  rm -f "$PLIST"
+  echo "Dexter service removed. Your data in $HOME_DIR/data is untouched."
+}
+
+case "${1:-}" in
+  install)   install ;;
+  uninstall) uninstall ;;
+  start)     launchctl bootstrap "$DOMAIN" "$PLIST" ;;
+  stop)      launchctl bootout "$DOMAIN/$LABEL" ;;
+  restart)   build && launchctl kickstart -k "$DOMAIN/$LABEL" ;;
+  status)    launchctl print "$DOMAIN/$LABEL" 2>/dev/null | grep -E "state =|pid =|last exit" || echo "not running" ;;
+  logs)      tail -n 50 -f "$LOG_DIR/dexter.log" ;;
+  run)       cd "$HOME_DIR" && DEXTER_HOME="$HOME_DIR" dotnet run --project "$HOME_DIR/src/Dexter" ;;
+  *)
+    echo "Usage: ./dexter install | uninstall | start | stop | restart | status | logs | run"
+    echo "  run  = run in the foreground (for testing); install = run as a background service"
+    exit 1 ;;
+esac
