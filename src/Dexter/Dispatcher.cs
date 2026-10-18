@@ -42,14 +42,11 @@ public sealed partial class Dispatcher(
 
         switch (request!.Action)
         {
-            case "new":
+            case RequestAction.New:
                 await StartSessionAsync(request, mail, ct);
                 break;
-            case "message":
+            case RequestAction.Message:
                 await MessageSessionAsync(request, mail, ct);
-                break;
-            default:
-                await ReplyAsync(mail, $"Unknown action \"{request.Action}\". Use \"new\" or \"message\".\n\n{FormatHelp}", ct);
                 break;
         }
     }

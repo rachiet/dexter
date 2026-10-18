@@ -11,9 +11,15 @@ namespace Dexter;
 ///            ---
 ///            free text for the agent
 /// </summary>
+public enum RequestAction
+{
+    New,      // start a session
+    Message,  // send to an existing session
+}
+
 public sealed record DexterRequest(
     string SessionName,
-    string Action,
+    RequestAction Action,
     IReadOnlyDictionary<string, string> Fields,
     string Text);
 
@@ -84,7 +90,19 @@ public static partial class MessageParser
             return false;
         }
 
-        request = new DexterRequest(name, action.ToLowerInvariant(), fields, text);
+        RequestAction? parsed = action.ToLowerInvariant() switch
+        {
+            "new" => RequestAction.New,
+            "message" => RequestAction.Message,
+            _ => null,
+        };
+        if (parsed is null)
+        {
+            error = $"Unknown action \"{action}\". Use \"new\" or \"message\".";
+            return false;
+        }
+
+        request = new DexterRequest(name, parsed.Value, fields, text);
         return true;
     }
 
