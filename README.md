@@ -2,9 +2,9 @@
 
 Drive coding agents on your Mac from your phone, over email.
 
-You ask the AI assistant on your phone to start a project or to tell a running project what to do next. The assistant sends an email to a Gmail account that only Dexter uses. Dexter is a small .NET service on your Mac. It reads the email, runs a coding agent (Claude Code today) in the right project folder, and replies in the same email thread. Your phone assistant reads the reply to you.
+Dexter lets you run coding projects on your home computer from wherever you are. Start a new project, check how it's going, suggest changes, or answer the agent's questions, all from your phone. You don't need to be near your computer to keep your projects moving.
 
-Use it to check on hours of agent work while you are away from your desk, and to answer an agent's questions so it doesn't sit blocked until you get back.
+You ask the AI assistant on your phone to start a project or to tell a running project what to do next. The assistant sends an email to a Gmail account that only Dexter uses. Dexter is a small .NET service on your Mac. It reads the email, runs a coding agent (Claude Code today) in the right project folder, and replies in the same email thread. Your phone assistant reads the reply to you.
 
 ## How it works
 
