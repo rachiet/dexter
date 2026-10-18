@@ -210,7 +210,6 @@ public sealed partial class Dispatcher(
         var sb = new StringBuilder(result.Text.Trim());
         sb.Append("\n\n— ");
         sb.Append(result.Duration.TotalMinutes >= 1 ? $"{(int)result.Duration.TotalMinutes}m {result.Duration.Seconds}s" : $"{result.Duration.Seconds}s");
-        if (result.CostUsd is { } cost) sb.Append($" · ${cost:0.00}");
         if (result.Failed) sb.Append(result.TimedOut ? " · timed out" : $" · exit code {result.ExitCode}");
         if (result.Denials.Count > 0)
         {

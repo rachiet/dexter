@@ -13,7 +13,6 @@ public sealed record AgentRun(
 public sealed record AgentResult(
     string Text,
     string? AgentSessionId,
-    decimal? CostUsd,
     IReadOnlyList<string> Denials,
     int ExitCode,
     bool TimedOut,
@@ -59,7 +58,6 @@ public sealed class ClaudeAgent(Settings settings, ILogger<ClaudeAgent> log) : I
             "--name", $"dexter-{run.SessionName}",
             "--permission-mode", "auto",
             "--permission-prompts", "none",
-            "--max-budget-usd", settings.MaxBudgetUsd.ToString(System.Globalization.CultureInfo.InvariantCulture),
             "--output-format", "json",
         })
         {
@@ -103,7 +101,7 @@ public sealed class ClaudeAgent(Settings settings, ILogger<ClaudeAgent> log) : I
         {
             return new AgentResult(
                 $"Stopped after {settings.RunTimeout.TotalMinutes:0} minutes (Dexter's time limit for one step).",
-                null, null, [], -1, true, watch.Elapsed);
+                null, [], -1, true, watch.Elapsed);
         }
 
         return Parse(output, errors, process.ExitCode, watch.Elapsed);
@@ -121,7 +119,6 @@ public sealed class ClaudeAgent(Settings settings, ILogger<ClaudeAgent> log) : I
             var root = doc.RootElement;
             var text = root.TryGetProperty("result", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString()! : "";
             var sessionId = root.TryGetProperty("session_id", out var s) ? s.GetString() : null;
-            decimal? cost = root.TryGetProperty("total_cost_usd", out var c) && c.ValueKind == JsonValueKind.Number ? c.GetDecimal() : null;
             var isError = root.TryGetProperty("is_error", out var e) && e.ValueKind == JsonValueKind.True;
 
             var denials = new List<string>();
@@ -137,13 +134,13 @@ public sealed class ClaudeAgent(Settings settings, ILogger<ClaudeAgent> log) : I
 
             if (string.IsNullOrWhiteSpace(text) && isError)
                 text = "The agent reported an error." + (stderr.Length > 0 ? "\n\n" + Tail(stderr) : "");
-            return new AgentResult(text, sessionId, cost, denials, isError && exitCode == 0 ? 1 : exitCode, false, duration);
+            return new AgentResult(text, sessionId, denials, isError && exitCode == 0 ? 1 : exitCode, false, duration);
         }
         catch (JsonException)
         {
             var text = stdout.Trim().Length > 0 ? stdout.Trim() : "The agent produced no output.";
             if (stderr.Trim().Length > 0) text += "\n\n" + Tail(stderr);
-            return new AgentResult(text, null, null, [], exitCode == 0 ? 1 : exitCode, false, duration);
+            return new AgentResult(text, null, [], exitCode == 0 ? 1 : exitCode, false, duration);
         }
     }
 

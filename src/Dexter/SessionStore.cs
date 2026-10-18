@@ -63,7 +63,6 @@ public sealed class SessionStore : IDisposable
                 ended_at    TEXT,
                 exit_code   INTEGER,
                 timed_out   INTEGER,
-                cost_usd    REAL,
                 prompt      TEXT,
                 result      TEXT
             );
@@ -132,10 +131,10 @@ public sealed class SessionStore : IDisposable
     }
 
     public void EndRun(long id, AgentResult r) => Execute("""
-        UPDATE runs SET ended_at = $now, exit_code = $exit, timed_out = $to, cost_usd = $cost, result = $result
+        UPDATE runs SET ended_at = $now, exit_code = $exit, timed_out = $to, result = $result
         WHERE id = $id
         """,
-        ("$now", Now()), ("$exit", r.ExitCode), ("$to", r.TimedOut ? 1 : 0), ("$cost", r.CostUsd),
+        ("$now", Now()), ("$exit", r.ExitCode), ("$to", r.TimedOut ? 1 : 0),
         ("$result", r.Text), ("$id", id));
 
     // ---- key/value ----

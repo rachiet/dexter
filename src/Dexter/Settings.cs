@@ -13,7 +13,6 @@ public sealed record Settings(
     string DefaultAgent,
     string ClaudePath,
     string AgentRulesFile,
-    decimal MaxBudgetUsd,
     TimeSpan RunTimeout)
 {
     public string DatabasePath => Path.Combine(DataDir, "dexter.db");
@@ -39,7 +38,6 @@ public sealed record Settings(
             DefaultAgent: Get("DEXTER_DEFAULT_AGENT", "claude"),
             ClaudePath: Get("DEXTER_CLAUDE_PATH", "claude"),
             AgentRulesFile: Path.GetFullPath(ExpandHome(Get("DEXTER_AGENT_RULES", Path.Combine(home, "agent-rules.md")))),
-            MaxBudgetUsd: decimal.Parse(Get("DEXTER_MAX_BUDGET_USD", "5"), System.Globalization.CultureInfo.InvariantCulture),
             RunTimeout: TimeSpan.FromMinutes(double.Parse(Get("DEXTER_RUN_TIMEOUT_MINUTES", "30"), System.Globalization.CultureInfo.InvariantCulture)));
     }
 
