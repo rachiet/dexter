@@ -2,13 +2,13 @@ using Microsoft.Data.Sqlite;
 
 namespace Dexter;
 
-public static class SessionStatus
+public enum SessionStatus
 {
-    public const string Queued = "queued";
-    public const string Working = "working";
-    public const string Idle = "idle";
-    public const string Waiting = "waiting";   // agent asked the user a question
-    public const string Error = "error";
+    Queued,
+    Working,
+    Idle,
+    Waiting,   // agent asked the user a question
+    Error,
 }
 
 public sealed record Session(
@@ -17,7 +17,7 @@ public sealed record Session(
     string Folder,
     string Agent,
     string AgentSessionId,
-    string Status,
+    SessionStatus Status,
     string? Summary,
     string? Questions,
     DateTimeOffset CreatedAt,
@@ -86,20 +86,20 @@ public sealed class SessionStore : IDisposable
         VALUES ($name, $thread, $folder, $agent, $sid, $status, $summary, $questions, $created, $updated)
         """,
         ("$name", s.Name), ("$thread", s.ThreadId), ("$folder", s.Folder), ("$agent", s.Agent),
-        ("$sid", s.AgentSessionId), ("$status", s.Status), ("$summary", s.Summary), ("$questions", s.Questions),
+        ("$sid", s.AgentSessionId), ("$status", ToDb(s.Status)), ("$summary", s.Summary), ("$questions", s.Questions),
         ("$created", s.CreatedAt.ToString("O")), ("$updated", s.UpdatedAt.ToString("O")));
 
-    public void SetStatus(string name, string status) => Execute(
+    public void SetStatus(string name, SessionStatus status) => Execute(
         "UPDATE sessions SET status = $status, updated_at = $now WHERE name = $name",
-        ("$status", status), ("$now", Now()), ("$name", name));
+        ("$status", ToDb(status)), ("$now", Now()), ("$name", name));
 
-    public void RecordOutcome(string name, string status, string? summary, string? questions, string? agentSessionId) => Execute("""
+    public void RecordOutcome(string name, SessionStatus status, string? summary, string? questions, string? agentSessionId) => Execute("""
         UPDATE sessions
         SET status = $status, summary = $summary, questions = $questions,
             agent_session_id = COALESCE($sid, agent_session_id), updated_at = $now
         WHERE name = $name
         """,
-        ("$status", status), ("$summary", summary), ("$questions", questions), ("$sid", agentSessionId),
+        ("$status", ToDb(status)), ("$summary", summary), ("$questions", questions), ("$sid", agentSessionId),
         ("$now", Now()), ("$name", name));
 
     // ---- processed emails ----
@@ -158,6 +158,9 @@ public sealed class SessionStore : IDisposable
 
     private static string Now() => DateTimeOffset.Now.ToString("O");
 
+    // Stored as lowercase text ("working") so the database stays readable.
+    private static string ToDb(SessionStatus status) => status.ToString().ToLowerInvariant();
+
     private List<Session> QuerySessions(string clause, string? param)
     {
         lock (_lock)
@@ -170,7 +173,7 @@ public sealed class SessionStore : IDisposable
             while (r.Read())
             {
                 list.Add(new Session(
-                    r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), r.GetString(5),
+                    r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), Enum.Parse<SessionStatus>(r.GetString(5), ignoreCase: true),
                     r.IsDBNull(6) ? null : r.GetString(6), r.IsDBNull(7) ? null : r.GetString(7),
                     DateTimeOffset.Parse(r.GetString(8)), DateTimeOffset.Parse(r.GetString(9))));
             }

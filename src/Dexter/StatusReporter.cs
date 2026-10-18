@@ -60,10 +60,10 @@ public sealed class StatusReporter(SessionStore store, IMailbox mailbox, ILogger
         return sb.ToString();
     }
 
-    private static string Describe(string status) => status switch
+    private static string Describe(SessionStatus status) => status switch
     {
         SessionStatus.Waiting => "waiting on you",
         SessionStatus.Error => "stopped with an error",
-        _ => status,
+        _ => status.ToString().ToLowerInvariant(),
     };
 }

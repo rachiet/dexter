@@ -266,7 +266,7 @@ public static partial class Outcome
     [GeneratedRegex(@"^\W*QUESTIONS\W*:\s*(?<v>[\s\S]*)\z", RegexOptions.Multiline | RegexOptions.IgnoreCase)]
     private static partial Regex QuestionsBlock();
 
-    public static (string Status, string? Summary, string? Questions) From(AgentResult result)
+    public static (SessionStatus Status, string? Summary, string? Questions) From(AgentResult result)
     {
         var text = result.Text.Trim();
         if (result.Failed)
